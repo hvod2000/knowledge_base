@@ -79,8 +79,21 @@ def decode_table(data: bytes, i: int = 0):
     return (table, header, types)
 
 
+def print_bytes(data: bytes):
+    for i in range(0, len(data), 16):
+        row = data[i : i + 16]
+        hexes = " ".join(hex(byte)[2:].zfill(2) for byte in row)
+        string = "".join(chr(b) if 32 <= b <= 126 else "▯" for b in row)
+        print(hexes.ljust(50), string)
+
+
 def test_tables():
-    print(*decode_table(encode_table([[1]])))
+    data = [[2, 3, "Hello there"], [4, 5, "Σe^ιτ=1"]]
+    table = (data, [f"field{i}" for i in range(len(data[0]))])
+    encoded = encode_table(*table)
+    print(*table)
+    print_bytes(encoded)
+    print(*decode_table(encoded))
 
 
 if __name__ == "__main__":
