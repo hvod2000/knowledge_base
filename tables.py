@@ -28,3 +28,60 @@ def encode_int(number: int):
 def decode_int(encoded: bytes, i: int):
     # TODO: support decoding big numbers!!!
     return encoded[i], i + 1
+
+
+def encode_column(typ, values):
+    header = encode_type(typ) + encode_int(len(values))
+    if typ is int:
+        return header + b"".join((map(encode_int, values)))
+    return header + b"".join(s.encode("utf-8") + b"\0" for s in values)
+
+
+def decode_column(encoded: bytes, i: int):
+    typ, i = decode_type(encoded, i)
+    length, i = decode_int(encoded, i)
+    values = []
+    if typ is int:
+        for _ in range(length):
+            value, i = decode_int(encoded, i)
+            values.append(value)
+    else:
+        for _ in range(length):
+            value, i = decode_str(encoded, i)
+            values.append(value)
+    return (typ, values), i
+
+
+def encode_table(data, header=None, types=None):
+    assert len(data) or types
+    if types is None:
+        types = [type(field) for field in data[0]]
+    if header is None:
+        header = [str(typ) for typ in types]
+    encoded = [encode_int(len(header))]
+    for column, column_header in enumerate(header):
+        values = [row[column] for row in data]
+        encoded.append(column_header.encode("utf-8") + b"\0")
+        encoded.append(encode_column(types[column], values))
+    return b"".join(encoded)
+
+
+def decode_table(data: bytes, i: int = 0):
+    width, i = decode_int(data, i)
+    header, types, columns = [], [], []
+    for _ in range(width):
+        head, i = decode_str(data, i)
+        (typ, values), i = decode_column(data, i)
+        header.append(head)
+        types.append(typ)
+        columns.append(values)
+    table = [[column[i] for column in columns] for i in range(len(columns[0]))]
+    return (table, header, types)
+
+
+def test_tables():
+    print(*decode_table(encode_table([[1]])))
+
+
+if __name__ == "__main__":
+    test_tables()
